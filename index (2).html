@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok Downloader</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Poppins',sans-serif;height:100vh;margin:0;overflow:hidden;background:#0d0d0d;color:#fff;display:flex;justify-content:center;align-items:center;}
+canvas{position:absolute;top:0;left:0;z-index:0;}
+.card{position:relative;z-index:1;background:rgba(0,0,0,0.85);color:#00ffff;padding:40px 30px;border-radius:20px;box-shadow:0 15px 30px rgba(0,255,255,0.2);max-width:450px;width:90%;text-align:center;animation:fadeIn 1s ease;}
+@keyframes fadeIn{0%{opacity:0;transform:translateY(-20px);}100%{opacity:1;transform:translateY(0);}}
+.card h2{font-size:28px;margin-bottom:25px;color:#00ffff;text-shadow:0 0 15px #00ffff;}
+.input-group{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap;}
+.input-group input{flex:1 1 200px;padding:14px;border-radius:12px;border:2px solid #00ffff;font-size:16px;background:rgba(0,0,0,0.5);color:#fff;outline:none;transition:0.3s;min-width:0;}
+.input-group input:focus{border-color:#00ffff;box-shadow:0 0 15px #00ffff;}
+.input-group button{flex:0 0 auto;padding:14px 20px;white-space:nowrap;transition:0.3s;box-shadow:0 0 10px #00ffff;}
+button{padding:14px 20px;margin:5px;border:none;border-radius:12px;font-size:16px;font-weight:600;color:#fff;cursor:pointer;background:linear-gradient(45deg,#00ffff,#00aaff);transition:0.3s;box-shadow:0 0 10px #00ffff,0 0 20px #00ffff;position:relative;overflow:hidden;}
+button:hover{background:linear-gradient(45deg,#00aaff,#00ffff);transform:scale(1.05);box-shadow:0 0 25px #00ffff,0 0 50px #00aaff;}
+button:active{transform:scale(0.98);}
+#result{margin-top:20px;display:flex;flex-direction:column;align-items:center;min-height:100px;}
+.loader{border:5px solid #111;border-top:5px solid #00ffff;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin-top:10px;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+footer{position:absolute;bottom:15px;width:100%;text-align:center;font-size:14px;color:#00ffff;letter-spacing:1px;text-shadow:0 0 5px #00ffff;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="card">
+<h2>TikTok Downloader</h2>
+<div class="input-group">
+  <input type="text" id="tiktokUrl" placeholder="Masukkan link TikTok ..." />
+  <button onclick="pasteLink()">📋 Paste</button>
+</div>
+<button onclick="fetchVideo()">Fetch Video</button>
+<div id="result"></div>
+</div>
+<footer>&copy; 2025 TikTok Downloader by Fariss</footer>
+
+<script>
+// Gradient + particles background
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+
+let particles = [];
+for(let i=0;i<120;i++){
+  particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*2+1,dx:(Math.random()-0.5)*0.6,dy:(Math.random()-0.5)*0.6});
+}
+
+let gradientShift = 0;
+
+function animate(){
+  gradientShift += 0.5;
+  const gradient = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  gradient.addColorStop(0,'#00ffff');
+  gradient.addColorStop(1,'#aa00ff');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  particles.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.fill();
+    p.x+=p.dx;p.y+=p.dy;
+    if(p.x>canvas.width)p.x=0;if(p.x<0)p.x=canvas.width;
+    if(p.y>canvas.height)p.y=0;if(p.y<0)p.y=canvas.height;
+  });
+  requestAnimationFrame(animate);
+}
+animate();
+
+// Paste from clipboard
+async function pasteLink(){
+  try{
+    const text = await navigator.clipboard.readText();
+    document.getElementById('tiktokUrl').value = text;
+  }catch(e){
+    alert('❌ Gagal membaca clipboard');
+  }
+}
+
+// Download video
+function downloadVideo(url, filename){
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// Fetch TikTok video
+async function fetchVideo(){
+  const urlInput = document.getElementById('tiktokUrl').value.trim();
+  const result = document.getElementById('result');
+  result.innerHTML = '<div class="loader"></div>';
+
+  if(!urlInput){ result.innerHTML='🛑 Masukkan link TikTok dulu!'; return; }
+
+  try{
+    const apiUrl = `https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(urlInput)}`;
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+
+    if(data.status && data.data.urls && data.data.urls.length > 0){
+      result.innerHTML = '';
+
+      // Tombol Download Video
+      if(data.data.urls[1]){
+        const btn = document.createElement('button');
+        btn.innerText = 'Download Video';
+        btn.onclick = ()=>{
+          data.data.urls.forEach((url,index)=>{
+            downloadVideo(url, `tiktok_${index+1}.mp4`);
+          });
+        };
+        result.appendChild(btn);
+      } else {
+        result.innerHTML = '⚠️ Video kedua tidak tersedia, tidak bisa download semua.';
+      }
+    } else {
+      result.innerHTML = '⚠️ Gagal mengambil video. Coba link lain.';
+    }
+  }catch(err){
+    result.innerHTML='❌ Terjadi error: '+err.message;
+  }
+}
+</script>
+</body>
+</html>
